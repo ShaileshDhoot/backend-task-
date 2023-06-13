@@ -78,22 +78,29 @@ exports.getTopRatedMovies = (req, res)=>{
 exports.getMoviesGenrewise= (req,res) =>{
 
     const quest = `
-    SELECT IFNULL(genres, '') AS Genre, IFNULL(primaryTitle, 'TOTAL') AS primaryTitle, SUM(numVotes) AS numVotes
-    FROM movies
-    INNER JOIN ratings ON movies.tconst = ratings.tconst
-    GROUP BY genres, primaryTitle
-    WITH ROLLUP   
+    SELECT movies.genres AS Genre, movies.primaryTitle, SUM(ratings.numVotes) AS numVotes
+    FROM movies 
+    INNER JOIN ratings  
+    ON movies.tconst = ratings.tconst
+    GROUP BY movies.genres, movies.primaryTitle
+    WITH ROLLUP
+    ORDER BY Genre ASC, numVotes ASC;
     `;
     // ROLLUP
     //  creates additional rows in the result set that represent subtotals and a final row that represents the grand total
+    // first group by genre then by num votes
     connection.query(quest, (error,result)=>{
         if(error){
             console.error('Error getting  movies genre-wise with subtotal of no of votes', error);
             res.status(500).json({ error: 'Internal Server Error' });
-        }else{
-
-            console.log(result);
-            res.json(result);
+        }else{     
+            const output = result.map((row) => ({
+            Genre: row.Genre|| '',
+            primaryTitle: row.primaryTitle || 'TOTAL',
+            numVotes: row.numVotes || 0,
+            }));
+            console.log(output)
+            res.json(output)
         }
 
     })
